@@ -1,5 +1,5 @@
 ---
-- hosts: kube-master #kubectl
+- hosts: kube-master
   remote_user: root
 
   tasks:
