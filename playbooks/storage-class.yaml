@@ -1,0 +1,23 @@
+---
+- hosts: kube-master #kubectl
+  remote_user: root
+
+  tasks:
+    - name: Clean existing storage class
+      copy:
+        src: ../files/sc.yaml
+        dest: /tmp
+    - command: "kubectl delete -f /tmp/sc.yaml"
+      ignore_errors: yes
+    
+    - name: Create storage class
+      copy:
+        src: ../files/sc.yaml
+        dest: /tmp
+    - command: "kubectl create -f /tmp/sc.yaml"
+      
+    - name: Cleaning up
+      file:
+        path: /tmp/sc.yaml
+        state: absent
+

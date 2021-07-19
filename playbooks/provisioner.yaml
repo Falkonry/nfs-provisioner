@@ -1,0 +1,50 @@
+---
+- hosts: kube-master #kubectl
+  remote_user: root
+
+  tasks:
+    
+    - name: copy deployment templates
+      copy:
+        src: ../files/deployment.yaml
+        dest: /tmp
+    - copy:
+        src: "{{ item }}"
+        dest: /tmp
+      with_items:
+        - "../files/sc.yaml"
+        - "../files/auth/clusterrole.yaml"
+        - "../files/auth/clusterrolebinding.yaml"
+        - "../files/auth/serviceaccount.yaml"
+    
+    - name: preparing deployment templates for nfs server
+      replace:
+        dest: /tmp/deployment.yaml
+        regexp: "NFS_IP"
+        replace: "{{ nfsSource }}"
+        
+    - name: preparing deployment templates for nfs path
+      replace:
+        dest: /tmp/deployment.yaml
+        regexp: "NFS_FILEPATH"
+        replace: "{{ storageFSPath }}"
+        
+    - name: adding provisioner role authorizations
+      command: kubectl create -f /tmp/serviceaccount.yaml -f /tmp/clusterrole.yaml -f /tmp/clusterrolebinding.yaml
+      ignore_errors: yes
+      
+    - name: deploy nfs storage class and provisioner
+      command: kubectl create -f /tmp/deployment.yaml -f /tmp/sc.yaml
+      ignore_errors: yes
+      
+    - name: Cleaning up
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - "/tmp/clusterrole.yaml"
+        - "/tmp/clusterrolebinding.yaml"
+        - "/tmp/serviceaccount.yaml"
+        - "/tmp/sc.yaml"
+        - "/tmp/deployment.yaml"
+

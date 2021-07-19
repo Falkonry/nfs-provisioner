@@ -1,0 +1,33 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: apps-nfs-provisioner
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: apps-nfs-provisioner
+    spec:
+      serviceAccountName: apps-nfs-provisioner
+      containers:
+        - name: apps-nfs-provisioner
+#          image: quay.io/external_storage/nfs-client-provisioner:latest
+          image: cyclonix/nfs-client-provisioner
+          volumeMounts:
+            - name: nfs-client-root
+              mountPath: /persistentvolumes
+          env:
+            - name: PROVISIONER_NAME
+              value: apps.io/nfs
+            - name: NFS_SERVER
+              value: NFS_IP
+            - name: NFS_PATH
+              value: NFS_FILEPATH
+      volumes:
+        - name: nfs-client-root
+          nfs:
+            server: NFS_IP
+            path: NFS_FILEPATH

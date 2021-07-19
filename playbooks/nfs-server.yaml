@@ -1,0 +1,67 @@
+---
+- hosts: nfs-server
+  remote_user: root
+  vars:
+    is_ubuntu: "'{{ansible_distribution}}' == 'Ubuntu'"
+    is_debian: "'{{ansible_distribution}}' == 'Debian'"
+    is_debian_or_ubuntu: "'{{ansible_distribution}}' in ['Ubuntu', 'Debian']"
+    is_centos: "'{{ansible_distribution}}' == 'CentOS'"
+    is_ubuntu_precise: "{{is_ubuntu}} and '{{ansible_distribution_release}}' == 'precise'"
+    is_ubuntu_raring: "{{is_ubuntu}} and '{{ansible_distribution_release}}' == 'raring'"
+    is_ubuntu_trusty: "{{is_ubuntu}} and '{{ansible_distribution_release}}' == 'trusty'"
+
+  tasks:
+    - name: Check if mount path is actually mounted
+      command: mountpoint -q {{mountPath}}
+      register: volume_stat
+      failed_when: volume_stat.rc == 1
+      changed_when: volume_stat.rc == 1
+      
+    - name: Create local NFS file path
+      file: 
+        path: "{{ storageFSPath }}"
+        state: directory
+  
+    - name: install nfs server
+      action: apt pkg=nfs-kernel-server state=present update_cache=yes
+      when: is_debian_or_ubuntu
+      tags:
+        -nfs
+    
+    - name: install nfs server
+      action: yum pkg=nfs-utils state=present
+      when: is_centos
+      tags:
+        - nfs
+        
+    - name: ensure nfs service is running (CentOS)
+      action: service name={{item}} state=started
+      when: is_centos
+      tags:
+        - nfs
+      with_items:
+        - rpcbind
+        - nfslock
+        - nfs
+    
+    - name: ensure nfs service is running (Debian)
+      action: service name={{item}} state=started
+      when: is_debian_or_ubuntu
+      tags:
+        - nfs
+      with_items:
+        - nfs-kernel-server
+        
+    - name: Copy /etc/exports file
+      copy: 
+        src: ../files/exports
+        dest: /etc/exports
+        owner: root
+        group: root
+      
+    - name: restart nfs server
+      service: name=nfs-kernel-server state=restarted
+      
+      
+      
+      
